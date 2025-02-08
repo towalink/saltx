@@ -250,8 +250,17 @@ def get_salt_version():
 def install_salt_conf(folder_pub, folder_priv, filename_minion_conf):
     """Write system-wide Salt configuration"""
     filename_target = '/etc/salt/minion.d/saltx.conf'
-    run_process(f'mkdir {os.path.dirname(filename_target)}', print_stdout=False, print_stderr=False, requires_root=True)
-    if os.path.isdir(os.path.dirname(filename_target)):
+    # Check whether something needs to be done
+    if os.path.isfile(filename_target):
+        with open(filename_target, 'r') as file:
+            file_content = file.read()
+        if (f'{folder_priv}/state' in file_content) and (f'{folder_pub}/state' in file_content):
+            return True
+    # Make sure config exists with correct content
+    filename_target_dir = os.path.dirname(filename_target)
+    if not os.path.isdir(filename_target_dir):
+        run_process(f'mkdir {filename_target_dir}', print_stdout=False, print_stderr=False, requires_root=True)
+    if os.path.isdir(filename_target_dir):
         logger.info(f'Writing Salt folder config to [{filename_minion_conf}] and [{filename_target}]')
         # Write config file as current user
         config_template = f'''
@@ -276,5 +285,5 @@ def install_salt_conf(folder_pub, folder_priv, filename_minion_conf):
         rc, _, _ = run_process(f'cp {filename_minion_conf} {filename_target}', requires_root=True)
         return rc == 0
     else:
-        logger.error(f'Can\'t write Salt config, [{os.path.dirname(filename_target)}] does not exist and could not be created')
+        logger.error(f'Can\'t write Salt config, [{filename_target_dir}] does not exist and could not be created')
         return False
