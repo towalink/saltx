@@ -240,9 +240,11 @@ class Logic():
         logger.info('Updating local Git repository...')
         self.init_git()
         logger.info(f'Updating Git repository [{self.git.repourl}]')
-        self.git.git_pull()
-        setupenv.touch_file(self.file_last_update_git)
-        logger.info('Updating local Git repository done')
+        if self.git.git_pull():
+            setupenv.touch_file(self.file_last_update_git)
+            logger.info('Updating local Git repository done')
+        else:
+            logger.error('Updating local Git repository failed')
 
     def update_vault(self):
         """Updates credential vault"""

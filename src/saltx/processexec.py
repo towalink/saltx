@@ -31,7 +31,10 @@ def run_process(command, env=None, cwd=None, print_stdout=True, print_stderr=Tru
                 print(line, end='')  # prints to stderr
             stderr_lines.append(line)
 
-    logger.info(f'Running command [{command}]...')
+    infix = ''
+    if cwd is not None:
+        infix += f' in [{cwd}]'
+    logger.info(f'Running command [{command}]{infix}...')
     args = shlex.split(command)
     if env is not None:
         newenv = os.environ.copy()

@@ -20,8 +20,12 @@ class GitRepo():
         self.repourl = repourl
         self.repourl_full = None
         if repourl is not None:
+            if len(token) and not len(username):
+                username = '__token__'  # make sure username is not empty if token is provided (required for newer environments)
             url = self.repourl.partition('//')
             self.repourl_full = f'{url[0]}{url[1]}{username}:{token}@{url[2]}'
+            repourl_masked = f'{url[0]}{url[1]}{username}:***@{url[2]}'
+            logger.debug(f'git repo url is [{repourl_masked}] (access credentials hidden)')
 
     def ensure_installed(self, auto_install=False):
         """Make sure that Git is available"""
