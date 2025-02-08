@@ -115,7 +115,7 @@ class VaultSync():
         for item in sorted(fileitems | vaultitems):
             # Get known data into variables
             filename = self.get_filename(item, path)
-            logger.debug('Processing file {filename}')
+            logger.debug(f'Processing file {filename}')
             if item in fileitems:
                 file_stat = os.stat(filename)
                 file_mtime = file_stat.st_mtime
