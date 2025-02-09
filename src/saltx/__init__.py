@@ -135,7 +135,9 @@ def parseopts():
         if len(args) > 0:
             show_usage_and_exit(f'too many arguments for operation [{operation}]')
     elif operation == 'initremote':
-        if len(args) > 0:
+        if len(args) == 0:
+            show_usage_and_exit(f'operation [{operation}] requires an argument (the target to be provisioned)')
+        if len(args) > 1:
             show_usage_and_exit(f'too many arguments for operation [{operation}]')
     else:
         show_usage_and_exit(f'provided operation [{operation}] is invalid')

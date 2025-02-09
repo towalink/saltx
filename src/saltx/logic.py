@@ -14,6 +14,7 @@ from . import gitrepo
 from . import queryuser
 from . import salt
 from . import setupenv
+from . import sshtools
 from . import userinteraction
 from . import vaultsync
 from . import yamlconfig
@@ -294,3 +295,23 @@ class Logic():
         if not self.salt.run_salt_ssh(args_string):
             logger.critical('Command failed')
             exit(1)
+
+    def find_private_folder(self, target):
+        """Find the private pillar folder for the given target"""
+        target_prefix = self.cfg.get_item('instance.target_prefix', 'host_')
+        target_dir = target_prefix + target
+        target_dir = os.path.join(self.folder_pillar_priv, target_dir)
+        if os.path.isdir(target_dir):
+            logger.debug(f'Private pillar folder for target [{target}] is [{target_dir}]')
+            return target_dir
+        else:
+            logger.error(f'Private pillar folder for target [{target}] should be [{target_dir}]. But it does not exist')
+        return None
+
+    def prepare_ssh(self, target):
+        """Prepare ssh access to a remote host"""
+        logger.debug(f'Preparing ssh access to target [{target}]...')
+        target_dir = self.find_private_folder(target)
+        private_key, public_key = sshtools.SshTools.ensure_keypair(target_dir)
+        logger.info(f'Using key pair in [{target_dir}], public key is [{public_key.strip()}]')
+        
