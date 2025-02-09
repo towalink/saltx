@@ -35,8 +35,13 @@ class Entry():
 
     def purgelocal(self):
         """Removes local installation"""
+        self.logic.purge_directory()
+
+    def initremote(self):
+        """Prepare remote host for use"""
+        logger.info('Ensuring that remote host is accessible via ssh key...')
         self.logic.prepare_folder_config()
-        # *** 
+
 
     def update(self, scope):
         """Updates git and/or vault as specified"""

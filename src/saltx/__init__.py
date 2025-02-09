@@ -134,12 +134,9 @@ def parseopts():
     elif operation == 'purgelocal':
         if len(args) > 0:
             show_usage_and_exit(f'too many arguments for operation [{operation}]')
-#    elif operation == 'initremote':
-#        if len(args) > 0:
-#            show_usage_and_exit(f'too many arguments for operation [{operation}]')
-#    elif operation == 'purgeremote':
-#        if len(args) > 0:
-#            show_usage_and_exit(f'too many arguments for operation [{operation}]')
+    elif operation == 'initremote':
+        if len(args) > 0:
+            show_usage_and_exit(f'too many arguments for operation [{operation}]')
     else:
         show_usage_and_exit(f'provided operation [{operation}] is invalid')
     return loglevel, instance, operation, args, kwargs

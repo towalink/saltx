@@ -142,3 +142,7 @@ class QueryUser():
             if len(password):
                 break
         return password
+
+    def get_purge_local(self):
+        """Query whether local Saltx folder shall be removed"""
+        return self.input_yes_no(f'Do you really want to completely remove the local Saltx folder? [No]', default='No')

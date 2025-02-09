@@ -5,6 +5,7 @@
 import logging
 import os
 import pathlib
+import shutil
 
 from . import bwvault
 from . import config
@@ -68,6 +69,17 @@ class Logic():
         """Makes sure that the given directory and its parents exist"""
         dirname = pathlib.Path(dir)
         dirname.mkdir(parents=True, exist_ok=True)
+
+    def purge_directory(self):
+        """Purges the Saltx directory from disk"""
+        if os.path.isdir(folder_main):        
+            if self.queryuserobj.get_purge_local():
+                shutil.rmtree(folder_main)
+                logger.info(f'Directory {folder_main} deleted')
+            else:
+                logger.info('Nothing done')
+        else:
+            logger.error(f'The directory {folder_main} does not exist; nothing to do')
 
     def lock_folder(self, warn_if_not_encrypted=False):
         """Create/mount encrypted storage"""
