@@ -57,7 +57,7 @@ def get_os_pkgmanager():
         logger.error(f'Unsupported Linux [{id}]')
         return None
 
-def run_process(command, env=None, cwd=None,  print_stdout=True, print_stderr=True, requires_root=False, preserve_env=False, exit_on_error=None):
+def run_process(command, env=None, cwd=None,  shell=False, print_stdout=True, print_stderr=True, requires_root=False, preserve_env=False, exit_on_error=None):
     """Execute a command and return result"""
     if requires_root:
         if not is_root():
@@ -65,7 +65,7 @@ def run_process(command, env=None, cwd=None,  print_stdout=True, print_stderr=Tr
             if preserve_env:
                 command_prefix += ' --preserve-env'
             command = command_prefix + ' ' + command
-    rc, out, err = processexec.run_process(command, env=env, cwd=cwd, print_stdout=print_stdout, print_stderr=print_stderr)
+    rc, out, err = processexec.run_process(command, env=env, cwd=cwd, shell=shell, print_stdout=print_stdout, print_stderr=print_stderr)
     if (rc != 0) and (exit_on_error is not None):
         logger.critical(f'Running command [{command}] failed, return code [{rc}]. Aborting.')
         exit(exit_on_error)

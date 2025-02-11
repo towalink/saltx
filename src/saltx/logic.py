@@ -308,10 +308,37 @@ class Logic():
             logger.error(f'Private pillar folder for target [{target}] should be [{target_dir}]. But it does not exist')
         return None
 
+    def get_target_parts(self, target):
+        """Split the target information into parts"""
+        # Obtain and remove user info
+        target_user = 'root'  # default if not given
+        tmp = target.partition('@')
+        if tmp[1] == '@':
+            target_user = tmp[0]
+            target = tmp[2]
+        # Obtain and remove port info
+        target_port = '22'
+        tmp = target.partition(':')
+        if tmp[1] == ':':
+            target = tmp[0]
+            target_port = tmp[2]        
+        # Get directory name for target (target host)
+        target_dir = self.find_private_folder(target.partition('.')[0])
+        # Finally return the data
+        return target_user, target, target_port, target_dir
+
     def prepare_ssh(self, target):
         """Prepare ssh access to a remote host"""
         logger.debug(f'Preparing ssh access to target [{target}]...')
-        target_dir = self.find_private_folder(target)
-        private_key, public_key = sshtools.SshTools.ensure_keypair(target_dir)
-        logger.info(f'Using key pair in [{target_dir}], public key is [{public_key.strip()}]')
-        
+        target_user, target_host, target_port, target_dir = self.get_target_parts(target)
+        if target_dir is None:
+            logger.info('Please create the folder for the target and start over')
+            return False
+        keydata = sshtools.SshTools.ensure_keypair(target_dir)
+        logger.info(f'Using key pair in [{target_dir}], public key is [{keydata.public_key.strip()}]')
+        # In a later version, also get user info from Saltstack roster file; for now, we just assume "root"
+        salt_user = 'root'
+        if target_user == salt_user:
+            return sshtools.SshTools.call_sshcopyid(target_user, target_host, target_port, keydata.pub_key_filename)
+        else:
+            return sshtools.SshTools.install_pubkey_usingsudo(target_user, target_host, target_port, keydata.pub_key_filename)

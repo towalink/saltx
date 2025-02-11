@@ -10,7 +10,7 @@ import threading
 logger = logging.getLogger(__name__)
 
 
-def run_process(command, env=None, cwd=None, print_stdout=True, print_stderr=True):
+def run_process(command, env=None, cwd=None, shell=False, print_stdout=True, print_stderr=True):
     """Execute a command and return result"""
 
     def read_stdout(pipe):
@@ -35,7 +35,10 @@ def run_process(command, env=None, cwd=None, print_stdout=True, print_stderr=Tru
     if cwd is not None:
         infix += f' in [{cwd}]'
     logger.info(f'Running command [{command}]{infix}...')
-    args = shlex.split(command)
+    if shell:
+        args = command
+    else:
+        args = shlex.split(command)
     if env is not None:
         newenv = os.environ.copy()
         newenv.update(env)
@@ -47,6 +50,7 @@ def run_process(command, env=None, cwd=None, print_stdout=True, print_stderr=Tru
         cwd=cwd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        shell=shell,
         text=True,
         bufsize=1,
         universal_newlines=True
