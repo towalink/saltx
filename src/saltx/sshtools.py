@@ -15,7 +15,7 @@ from . import setupenv
 logger = logging.getLogger(__name__)
 
 
-KeyPairData = collections.namedtuple('KeyPairData', ['private_key', 'public_key', 'priv_key_filename', 'pub_key_filename'])
+KeyPairData = collections.namedtuple('KeyPairData', ['priv_key', 'pub_key', 'priv_key_filename', 'pub_key_filename'])
 
 
 class SshTools():
@@ -31,26 +31,26 @@ class SshTools():
         """Returns the key pair in the given directory"""
         priv_key_filename, pub_key_filename = SshTools.get_filenames(dirname)
         with open(priv_key_filename, 'r') as f:
-            private_key = f.read()
+            priv_key = f.read().strip()
         with open(pub_key_filename, 'r') as f:
-            public_key = f.read()
-        return KeyPairData(private_key, public_key, priv_key_filename, pub_key_filename)
+            pub_key = f.read().strip()
+        return KeyPairData(priv_key, pub_key, priv_key_filename, pub_key_filename)
 
     @staticmethod
     def create_keypair(dirname=None):
         """Create an ssh key pair using ssh-keygen and return it"""
-        private_key = public_key = None
+        priv_key = pub_key = None
         with tempfile.TemporaryDirectory() as tmpdirname:
             dirname = tmpdirname if (dirname is None) else dirname
             logger.debug(f'Creating ssh key pair in directory [{dirname}]')
             priv_key_filename, pub_key_filename = SshTools.get_filenames(dirname)
             rc, out, err = setupenv.run_process(f'ssh-keygen -f {priv_key_filename} -N ""', print_stdout=False, print_stderr=False)
             if rc == 0:
-                private_key, public_key = SshTools.read_keypair(dirname)
+                priv_key, pub_key = SshTools.read_keypair(dirname)
                 logger.info(f'Created ssh key pair in [{dirname}], public key is [{public_key.strip()}]')
             else:
                 logger.error('Creating ssh key pair failed [{err}]')
-        return KeyPairData(private_key, public_key, priv_key_filename, pub_key_filename)
+        return KeyPairData(priv_key, pub_key, priv_key_filename, pub_key_filename)
 
     @staticmethod
     def ensure_keypair(dirname=None):
@@ -68,7 +68,8 @@ class SshTools():
         return rc == 0
 
     @staticmethod
-    def install_pubkey_usingsudo(user, host, port, keyfile):
+    def install_pubkey_usingsudo_twostep(user, host, port, keyfile):
+        """Install an ssh key in authorized_keys file using sudo on a remote host (two-step version)"""
 
         def generate_random_string(length=12):
             alphabet = string.ascii_letters
@@ -87,5 +88,27 @@ class SshTools():
         rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
         if rc != 0:
             logger.error(f'Adding public key to root\'s authorized_keys file on [{user}:{host}] failed')
+            return False
+        return True
+
+    @staticmethod
+    def install_pubkey_usingsudo(user, host, port, keystring):
+        """Install an ssh key in authorized_keys file using sudo on a remote host"""
+        cmd = f"ssh -t -o LogLevel=QUIET -o StrictHostKeyChecking=no -p {port} {user}@{host} "
+        cmd += r'''"sudo bash -c 'ESCAPED_STRING=\$(printf \"%s\" \"''' + keystring + r'''\"); mkdir -p ~/.ssh; chmod 700 ~/.ssh; grep -qxFs \"\${ESCAPED_STRING}\" ~/.ssh/authorized_keys || echo \"\${ESCAPED_STRING}\" >> ~/.ssh/authorized_keys'"'''
+        rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
+        if rc != 0:
+            logger.error(f'Adding public key to root\'s authorized_keys file on [{user}:{host}] failed')
+            return False
+        return True
+
+    @staticmethod
+    def uninstall_pubkey_usingsudo(user, host, port, keystring):
+        """Uninstall an ssh key in authorized_keys file using sudo on a remote host"""
+        cmd = f"ssh -t -o LogLevel=QUIET -o StrictHostKeyChecking=no -p {port} {user}@{host} "
+        cmd += r'''"sudo bash -c 'ESCAPED_STRING=\$(printf \"%s\" \"''' + keystring + r'''\"); sed -i \"\\~^\${ESCAPED_STRING}\\\$~d\" ~/.ssh/authorized_keys'"'''
+        rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
+        if rc != 0:
+            logger.error(f'Removing public key from root\'s authorized_keys file on [{user}:{host}] failed')
             return False
         return True

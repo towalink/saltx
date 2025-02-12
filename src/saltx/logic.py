@@ -335,10 +335,10 @@ class Logic():
             logger.info('Please create the folder for the target and start over')
             return False
         keydata = sshtools.SshTools.ensure_keypair(target_dir)
-        logger.info(f'Using key pair in [{target_dir}], public key is [{keydata.public_key.strip()}]')
+        logger.info(f'Using key pair in [{target_dir}], public key is [{keydata.pub_key.strip()}]')
         # In a later version, also get user info from Saltstack roster file; for now, we just assume "root"
         salt_user = 'root'
         if target_user == salt_user:
             return sshtools.SshTools.call_sshcopyid(target_user, target_host, target_port, keydata.pub_key_filename)
         else:
-            return sshtools.SshTools.install_pubkey_usingsudo(target_user, target_host, target_port, keydata.pub_key_filename)
+            return sshtools.SshTools.install_pubkey_usingsudo(target_user, target_host, target_port, keydata.pub_key)
