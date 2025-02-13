@@ -7,6 +7,7 @@ import logging
 import os
 import random
 import string
+import subprocess
 import tempfile
 
 from . import setupenv
@@ -53,13 +54,21 @@ class SshTools():
         return KeyPairData(priv_key, pub_key, priv_key_filename, pub_key_filename)
 
     @staticmethod
-    def ensure_keypair(dirname=None):
+    def get_keypair(dirname=None):
         """Ensure an ssh key pair exists in a given directory and return it"""
         priv_key_filename, pub_key_filename = SshTools.get_filenames(dirname)
         if os.path.isfile(priv_key_filename):
             return SshTools.read_keypair(dirname)
         else:
+            return None
+
+    @staticmethod
+    def ensure_keypair(dirname=None):
+        """Ensure an ssh key pair exists in a given directory and return it"""
+        result = SshTools.get_keypair(dirname)
+        if result is None:
             return SshTools.create_keypair(dirname)
+        return result
 
     @staticmethod
     def call_sshcopyid(user, host, port, keyfile):
@@ -110,5 +119,15 @@ class SshTools():
         rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
         if rc != 0:
             logger.error(f'Removing public key from root\'s authorized_keys file on [{user}:{host}] failed')
+            return False
+        return True
+
+    @staticmethod
+    def start_ssh_session(user, host, port, keyfile):
+        """Starts an interactive ssh session"""
+        cmd = f'ssh -i {keyfile} -p {port} {user}@{host}'
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            logger.error(f'ssh session to [{user}:{host}] returned error code [{result.returncode}]')
             return False
         return True

@@ -335,10 +335,26 @@ class Logic():
             logger.info('Please create the folder for the target and start over')
             return False
         keydata = sshtools.SshTools.ensure_keypair(target_dir)
-        logger.info(f'Using key pair in [{target_dir}], public key is [{keydata.pub_key.strip()}]')
+        logger.info(f'Using key pair in [{target_dir}]')
+        logger.debug(f'Public key is [{keydata.pub_key.strip()}]')
         # In a later version, also get user info from Saltstack roster file; for now, we just assume "root"
         salt_user = 'root'
         if target_user == salt_user:
-            return sshtools.SshTools.call_sshcopyid(target_user, target_host, target_port, keydata.pub_key_filename)
+            result = sshtools.SshTools.call_sshcopyid(target_user, target_host, target_port, keydata.pub_key_filename)
         else:
-            return sshtools.SshTools.install_pubkey_usingsudo(target_user, target_host, target_port, keydata.pub_key)
+            result = sshtools.SshTools.install_pubkey_usingsudo(target_user, target_host, target_port, keydata.pub_key)
+        if result:
+            logger.info('Deployment of ssh key successful')
+        return result
+
+    def start_ssh(self, target):
+        """Start an ssh shell to a remote host"""
+        target_user, target_host, target_port, target_dir = self.get_target_parts(target)
+        if target_dir is None:
+            logger.error('Host directory not found; you need to prepare to access that host first ("saltx initremote <target>")')
+            return False
+        keydata = sshtools.SshTools.get_keypair(target_dir)
+        if keydata is None:
+            logger.error('Key material not found; you need to prepare to access that host first ("saltx initremote <target>")')
+            return False        
+        return sshtools.SshTools.start_ssh_session(target_user, target_host, target_port, keydata.priv_key_filename)

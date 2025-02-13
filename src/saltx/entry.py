@@ -43,6 +43,12 @@ class Entry():
         self.logic.prepare_folder_config()
         self.logic.prepare_ssh(target)
 
+    def startshell(self, target):
+        """Prepare remote host for use"""
+        logger.info('Starting a remote shell using ssh key...')
+        self.logic.prepare_folder_config()
+        self.logic.start_ssh(target)
+
     def update(self, scope):
         """Updates git and/or vault as specified"""
         self.logic.prepare_folder_config()
