@@ -41,6 +41,7 @@ def get_os_info():
 def get_os_id():
     """Get operating system family identifier"""
     id, _ = get_os_info()
+    return id
 
 def get_os_pkgmanager():
     """Get packet manager operating system family identifier"""
@@ -65,6 +66,10 @@ def run_process(command, env=None, cwd=None,  shell=False, print_stdout=True, pr
             if preserve_env:
                 command_prefix += ' --preserve-env'
             command = command_prefix + ' ' + command
+            if not find_tool('sudo'):
+                logger.critical(f'Can\'t run command [{command}] as "sudo" tool is not installed. Aborting.')
+                exit(exit_on_error)
+                return -1, None, None
     rc, out, err = processexec.run_process(command, env=env, cwd=cwd, shell=shell, print_stdout=print_stdout, print_stderr=print_stderr)
     if (rc != 0) and (exit_on_error is not None):
         logger.critical(f'Running command [{command}] failed, return code [{rc}]. Aborting.')
@@ -74,10 +79,6 @@ def run_process(command, env=None, cwd=None,  shell=False, print_stdout=True, pr
 def find_tool(tool):
     """Returns the path of the given tool"""
     tool = os.path.expanduser(tool)
-    #*** old
-    #tool_path = subprocess.run(['which', tool], capture_output=True, text=True).stdout.strip()
-    #if tool_path.strip() == '':
-    #    tool_path = None
     tool_path = shutil.which(tool)
     return tool_path
 
@@ -154,10 +155,10 @@ def install_encfs():
         rc = -1
     return rc == 0
 
-def configure_encfs():
+def configure_encfs(allow_other=False):
     """Configures the encfs package incl. FUSE"""
     # Make sure that 'user_allow_other' is set in FUSE config if we're not running as root user
-    if not is_root():
+    if not is_root() and allow_other:
         fuse_config = '/etc/fuse.conf'
         logger.debug(f'Checking "user_allow_other" flag in [{fuse_config}]')
         if os.path.isfile(fuse_config):
@@ -204,7 +205,8 @@ def install_salt_pkg(salt_version=None, install_salt_ssh=False):
     """Installs the Salt package in the selected version"""
     pm = get_os_pkgmanager()
     if pm == 'apk':
-        rc, _, _ = run_process('apk add salt-lts-minion', requires_root=True)
+        pkg = 'salt-lts-ssh' if install_salt_ssh else 'salt-lts-minion'
+        rc, _, _ = run_process(f'apk add {pkg}', requires_root=True)
     elif pm == 'apt':
         # Follow https://docs.saltproject.io/salt/install-guide/en/latest/topics/install-by-operating-system/linux-deb.html
         keyfile = '/etc/apt/keyrings/salt-archive-keyring.pgp'
@@ -247,43 +249,51 @@ def get_salt_version():
     # Variable "out" looks like "salt-call 3007.0 (Chlorine)"
     return out.split(' ')[1]
 
-def install_salt_conf(folder_pub, folder_priv, filename_minion_conf):
-    """Write system-wide Salt configuration"""
-    filename_target = '/etc/salt/minion.d/saltx.conf'
-    # Check whether something needs to be done
-    if os.path.isfile(filename_target):
-        with open(filename_target, 'r') as file:
-            file_content = file.read()
-        if (f'{folder_priv}/state' in file_content) and (f'{folder_pub}/state' in file_content):
-            return True
-    # Make sure config exists with correct content
-    filename_target_dir = os.path.dirname(filename_target)
-    if not os.path.isdir(filename_target_dir):
-        run_process(f'mkdir {filename_target_dir}', print_stdout=False, print_stderr=False, requires_root=True)
-    if os.path.isdir(filename_target_dir):
-        logger.info(f'Writing Salt folder config to [{filename_minion_conf}] and [{filename_target}]')
-        # Write config file as current user
-        config_template = f'''
-            file_roots:
-              base:
-                - {folder_priv}/state
-                - {folder_pub}/state
-            
-            pillar_roots:
-              base:
-                - {folder_priv}/pillar
-                - {folder_pub}/pillar
-        '''
-        config_template = textwrap.dedent(config_template).lstrip()
-        try:
-            with open(filename_minion_conf, 'w') as minion_conf:
-                minion_conf.write(config_template)
-        except Exception as e:
-            logger.error(f'Writing file [{filename_minion_conf}] failed:\n{str(e)}')
-            return False
-        # Copy file as root to target        
-        rc, _, _ = run_process(f'cp {filename_minion_conf} {filename_target}', requires_root=True)
-        return rc == 0
-    else:
-        logger.error(f'Can\'t write Salt config, [{filename_target_dir}] does not exist and could not be created')
-        return False
+def write_saltfile(saltfile_name):
+    """(Re-)Creates our Saltfile"""
+    logger.debug(f'Writing Saltfile [{saltfile_name}]')
+    config_dir = os.path.dirname(saltfile_name)  # we take the directory with our Saltfile as Salt root
+    config = f'''
+        salt-call:
+          config_dir: {config_dir}
+        
+        salt-ssh:
+          config_dir: {config_dir}
+    '''
+    config = textwrap.dedent(config).lstrip()
+    with open(saltfile_name, 'w') as f:
+        f.write(config)
+    return True
+
+def write_salt_conf(saltfile_name, folder_pub, folder_priv):
+    """Write Salt configuration"""
+    # Salt directory
+    salt_dir = os.path.dirname(saltfile_name)
+    if not os.path.isdir(salt_dir):
+        os.mkdir(salt_dir)
+    # Salt master file
+    master_name = os.path.join(salt_dir, 'master')
+    logger.debug(f'Writing Salt master config file [{master_name}]')
+    config = f'''
+        root_dir: {salt_dir}
+
+        file_roots:
+          base:
+            - {folder_priv}/state
+            - {folder_pub}/state
+        
+        pillar_roots:
+          base:
+            - {folder_priv}/pillar
+            - {folder_pub}/pillar
+    '''
+    config = textwrap.dedent(config).lstrip()
+    with open(master_name, 'w') as f:
+        f.write(config)
+    # Salt roster file
+    roster_name = os.path.join(salt_dir, 'roster')
+    logger.debug(f'Writing Salt roster config file [{roster_name}]')    
+    with open(roster_name, 'w') as f:
+        f.write('')
+    # All successful
+    return True

@@ -36,10 +36,10 @@ class EncFS():
                 logger.critical('EncFS is not available on this system')
                 exit(1)
 
-    def ensure_configured(self):
+    def ensure_configured(self, allow_other=False):
         """Make sure that EncFS tool incl. FUSE is properly configured for use"""
         logger.debug('Ensuring that EncFS and FUSE are properly configured')
-        if not setupenv.configure_encfs():
+        if not setupenv.configure_encfs(allow_other):
             logger.critical('EncFS/FUSE could not be configured')
             exit(1)
     
@@ -50,7 +50,7 @@ class EncFS():
     def mount(self, encr_path, decr_path, minutes, allow_other=False):
         """Create or mount an encrypted folder"""
         self.ensure_installed()
-        self.ensure_configured()
+        self.ensure_configured(allow_other)
         logger.debug(f'Mounting encrypted folder [{encr_path}] into [{decr_path}] for [{minutes}] minutes with allow_other set to [{allow_other}]')
         if os.path.ismount(decr_path):
             logger.warn(f'Folder [{decr_path}] is already a mount point. The mount command thus might fail')

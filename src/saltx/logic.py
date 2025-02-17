@@ -53,9 +53,9 @@ class Logic():
         # Create/mount encrypted storage
         self.unlock_folder(allow_other=unlock_allow_other)
         # Prepare config object
-        self.init_config()
-        if (self.cfg.get_item('instance.folder_public') is not None) or (self.cfg.get_item('instance.folder_private') is not None):
-            self.init_config() # need to call a second time to consider path information that got read the first time
+        self.init_config(first_run=True)
+        if (self.cfg.get_item('instance.folder_public') is not None) or (self.cfg.get_item('instance.folder_private') is not None) or (self.folder_saltx_priv is not None):
+            self.init_config() # need to call a second time to consider path information and instance config path that got read the first time
 
     def set_config_defaults(self):
         # Note: bw-linux-2024.10.0.zip and bw-linux-2024.11.0.zip not working on Alpine as of 2024-11-15
@@ -106,7 +106,7 @@ class Logic():
                 logger.critical(f'This installation does not use encrypted storage')
                 exit(1)
                 
-    def init_config(self):
+    def init_config(self, first_run=False):
         """Initializes the configuration object"""
         # Instance-specific config
         if self.folder_saltx_priv is not None:
@@ -135,14 +135,20 @@ class Logic():
         self.folder_priv = '~/saltx/private' if (self.instance == 'default') else f'~/saltx/{self.instance}_private'
         self.folder_priv = self.cfg.get_item('instance.folder_private', default=self.folder_priv)
         self.folder_priv = os.path.expanduser(self.folder_priv)
+        if not first_run:
+            logger.debug(f'Base folders: public [{self.folder_pub}], private [{self.folder_priv}]')
         self.ensure_directory(self.folder_pub)
         # Get prefix
         self.prefix = self.cfg.get_item('instance.prefix')
+        if not first_run:
+            logger.debug(f'Instance prefix: [{self.prefix}]')
         # Get subfolders
         private = 'private' if (self.prefix is None) else f'{self.prefix}_private'
         self.folder_saltx_priv = os.path.join(self.folder_priv, 'saltx')
         self.folder_state_priv = os.path.join(self.folder_priv, 'state', private)
         self.folder_pillar_priv = os.path.join(self.folder_priv, 'pillar', private)
+        if not first_run:
+            logger.debug(f'Private folders: Saltx [{self.folder_saltx_priv}], State [{self.folder_state_priv}], Pillar [{self.folder_pillar_priv}]')
 
     def ensure_bw(self):
         """Makes sure that tooling for accessing Bitwarden/Vaultwarden is available"""
@@ -237,16 +243,17 @@ class Logic():
             logger.info(f'Cloning Git repository [{git_repourl}]')
             self.git.git_clone()
 
+    def init_salt(self):
+        """Prepare use of Salt"""
+        self.salt = salt.Salt(folder_main, self.folder_pub, self.folder_priv, queryuserobj=self.queryuserobj)
+
     def ensure_salt(self, saltssh=False):
         """Makes sure that Salt is available on the system"""
         logger.debug('Making sure that Salt is available on the system...')        
-        self.salt = salt.Salt(self.folder_pub, self.folder_priv, queryuserobj=self.queryuserobj)
-        auto_install = self.cfg.get_item('general.auto_install_salt')
+        self.init_salt()
+        auto_install = self.cfg.get_item('general.auto_install_salt')        
         self.salt.ensure_installed(auto_install=auto_install, saltssh=saltssh)
-
-    def init_salt(self, saltssh=False):
-        """Prepare use of Salt"""
-        self.salt = salt.Salt(self.folder_pub, self.folder_priv, queryuserobj=self.queryuserobj)
+        self.salt.ensure_configured()
 
     def update_git(self):
         """Updates git repository"""
@@ -284,15 +291,34 @@ class Logic():
         """Run salt-call locally"""
         logger.info('Running salt-call locally...')
         self.init_salt()
-        if not self.salt.run_salt_call_locally(args_string, self.folder_pub, self.folder_priv, os.path.join(folder_main, 'minion.conf')):
+        if not self.salt.run_salt_call_locally(args_string):
             logger.critical('Command failed')
             exit(1)
 
-    def run_salt_ssh(self, args_string):
+    def run_salt_ssh(self, target, args_string):
         """Run salt-ssh"""
         logger.info('Running salt-ssh...')
-        self.init_salt(saltssh=True)
-        if not self.salt.run_salt_ssh(args_string):
+        self.init_salt()
+        target_user, target_host, target_port, target_dir = self.get_target_parts(target)
+        if target_dir is None:
+            logger.warning(f'Host directory not found for [{target}]; just calling salt-ssh with the provided arguments')
+        else:
+            if self.salt.is_configured():
+                # Argument for ssh key
+                keydata = sshtools.SshTools.get_keypair(target_dir)
+                if keydata is None:
+                    logger.warning('Key material not found; you need to prepare to access that host first ("saltx initremote <target>"); just calling salt-ssh with the provided arguments')
+                else:
+                    args_string = f'--priv {keydata.priv_key_filename} ' + args_string
+                # Argument for Saltfile
+                saltfile_name = self.salt.get_saltfile_name()
+                if saltfile_name is None:
+                    logger.critical('Saltfile not found; run "saltx initmaster" first')
+                    exit(1)
+                args_string = f'--saltfile={saltfile_name} ' + args_string
+            else:
+                logger.warning('Salt is not yet configured (run "saltx initmaster"); just calling salt-ssh with the provided arguments')      
+        if not self.salt.run_salt_ssh(args_string, folder_main=folder_main):
             logger.critical('Command failed')
             exit(1)
 
@@ -335,8 +361,11 @@ class Logic():
             logger.info('Please create the folder for the target and start over')
             return False
         keydata = sshtools.SshTools.ensure_keypair(target_dir)
+        if keydata is None:
+            logger.error('No keypair available')
+            return False
         logger.info(f'Using key pair in [{target_dir}]')
-        logger.debug(f'Public key is [{keydata.pub_key.strip()}]')
+        logger.debug(f'Public key is [{keydata.pub_key}]')
         # In a later version, also get user info from Saltstack roster file; for now, we just assume "root"
         salt_user = 'root'
         if target_user == salt_user:

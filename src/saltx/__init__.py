@@ -4,7 +4,7 @@
 
 """
 Towalink
-Copyright (C) 2024 Dirk Henrici
+Copyright (C) 2024-2025 Dirk Henrici
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -52,17 +52,22 @@ def usage():
     print('  <arguments...>                    additional arguments depending on operation')
     print()
     print('Operations:')
-    print('  %s initlocal                                 Prepares for using Saltstack locally' % name)
-    print('  %s unlock [minutes]                          Unlocks the local vault' % name)
-    print('  %s lock                                      Locks the local vault' % name)
-    print('  %s update [all|git|vault]                    Update local data' % name)
-    print('  %s [--noupdate] local <salt-call arguments>  Run salt-call --local' % name)
-    print('  %s [--noupdate] ssh <salt-ssh arguments>     Run salt-ssh' % name)
+    print('  %s initmaster                                      Prepares the local machine to provision others' % name)
+    print('  %s initlocal                                       Prepares for using Saltstack locally' % name)
+    print('  %s update [all|git|vault]                          Update local data' % name)
+    print('  %s [--noupdate] local <salt-call arguments>        Run "salt-call --local"' % name)
+    print('  %s [--noupdate] ssh <target> <salt-ssh arguments>  Run "salt-ssh"' % name)
+    print('  %s startshell <target>                             Open ssh shell to target machine' % name)
+    print('  %s unlock [minutes]                                Unlocks the local encrypted folder' % name)
+    print('  %s lock                                            Locks the local encrypted folder' % name)
     print()
     print('Examples:   %s --loglevel debug ...' % name)
+    print('            %s initmaster' % name)
     print('            %s initlocal' % name)
     print('            %s update' % name)
     print('            %s local --id testserver state.apply' % name)
+    print('            %s ssh myhost.mydomain state.apply' % name)
+    print('            %s startshell myhost.mydomain' % name)
     print()
 
 def show_usage_and_exit(text = None):
@@ -123,11 +128,15 @@ def parseopts():
         if len(args) > 1:
             show_usage_and_exit(f'too many arguments for operation [{operation}]')
         if len(args) == 0:
-            args = ['15']
+            args = ['15']  # set 15 minutes default
     elif operation == 'local':
         pass  # all arguments are just passed on
     elif operation == 'ssh':
-        pass  # all arguments are just passed on
+        if len(args) == 0:
+            show_usage_and_exit(f'operation [{operation}] requires at least one argument (the target to be provisioned)')
+    elif operation == 'initmaster':
+        if len(args) > 0:
+            show_usage_and_exit(f'too many arguments for operation [{operation}]')
     elif operation == 'initlocal':
         if len(args) > 0:
             show_usage_and_exit(f'too many arguments for operation [{operation}]')

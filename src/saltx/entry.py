@@ -25,12 +25,20 @@ class Entry():
         """Unlocks the encrypted folder for the given number of minutes"""
         self.logic.unlock_folder(minutes=minutes, persistent=True, warn_if_not_encrypted=True)
 
+    def initmaster(self):
+        """Ensures that everything is set up for use as Salt master"""
+        logger.info('Ensuring that everything is set up for use as Salt master...')
+        self.logic.prepare_folder_config()
+        self.logic.ensure_bw()
+        self.logic.ensure_git()
+        self.logic.ensure_salt(saltssh=True)
+
     def initlocal(self):
         """Ensures that everything is set up for local use"""
         logger.info('Ensuring that everything is set up for local use...')
         self.logic.prepare_folder_config()
         self.logic.ensure_bw()
-        self.logic.ensure_git()        
+        self.logic.ensure_git()
         self.logic.ensure_salt()
 
     def purgelocal(self):
@@ -72,4 +80,4 @@ class Entry():
         self.logic.prepare_folder_config()
         if not kwargs.get('noupdate', False):
             self.logic.check_updates()
-        self.logic.run_salt_ssh(args_string)
+        self.logic.run_salt_ssh(target=args[0], args_string=args_string)

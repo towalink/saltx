@@ -40,18 +40,18 @@ class SshTools():
     @staticmethod
     def create_keypair(dirname=None):
         """Create an ssh key pair using ssh-keygen and return it"""
-        priv_key = pub_key = None
+        keydata = None
         with tempfile.TemporaryDirectory() as tmpdirname:
             dirname = tmpdirname if (dirname is None) else dirname
             logger.debug(f'Creating ssh key pair in directory [{dirname}]')
             priv_key_filename, pub_key_filename = SshTools.get_filenames(dirname)
             rc, out, err = setupenv.run_process(f'ssh-keygen -f {priv_key_filename} -N ""', print_stdout=False, print_stderr=False)
             if rc == 0:
-                priv_key, pub_key = SshTools.read_keypair(dirname)
-                logger.info(f'Created ssh key pair in [{dirname}], public key is [{public_key.strip()}]')
+                keydata = SshTools.read_keypair(dirname)
+                logger.info(f'Created ssh key pair in [{dirname}], public key is [{keydata.pub_key}]')
             else:
                 logger.error('Creating ssh key pair failed [{err}]')
-        return KeyPairData(priv_key, pub_key, priv_key_filename, pub_key_filename)
+        return keydata
 
     @staticmethod
     def get_keypair(dirname=None):
@@ -93,7 +93,7 @@ class SshTools():
             logger.error(f'Uploading public key to [{user}:{host}] failed')
             return False
         # Second step: make sure key is present in root's authorized_keys file            
-        cmd = f"ssh -t -o LogLevel=QUIET -o StrictHostKeyChecking=no -p {port} {user}@{host} \"sudo bash -c 'mkdir -p ~/.ssh; chmod 700 ~/.ssh; grep -qxFs -f {tmpfile} ~/.ssh/authorized_keys || cat {tmpfile} >> ~/.ssh/authorized_keys'; rm {tmpfile}\""
+        cmd = f"ssh -t -o StrictHostKeyChecking=no -p {port} {user}@{host} \"sudo bash -c 'mkdir -p ~/.ssh; chmod 700 ~/.ssh; grep -qxFs -f {tmpfile} ~/.ssh/authorized_keys || cat {tmpfile} >> ~/.ssh/authorized_keys'; rm {tmpfile}\""
         rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
         if rc != 0:
             logger.error(f'Adding public key to root\'s authorized_keys file on [{user}:{host}] failed')
@@ -103,7 +103,7 @@ class SshTools():
     @staticmethod
     def install_pubkey_usingsudo(user, host, port, keystring):
         """Install an ssh key in authorized_keys file using sudo on a remote host"""
-        cmd = f"ssh -t -o LogLevel=QUIET -o StrictHostKeyChecking=no -p {port} {user}@{host} "
+        cmd = f"ssh -t -o StrictHostKeyChecking=no -p {port} {user}@{host} "
         cmd += r'''"sudo bash -c 'ESCAPED_STRING=\$(printf \"%s\" \"''' + keystring + r'''\"); mkdir -p ~/.ssh; chmod 700 ~/.ssh; grep -qxFs \"\${ESCAPED_STRING}\" ~/.ssh/authorized_keys || echo \"\${ESCAPED_STRING}\" >> ~/.ssh/authorized_keys'"'''
         rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
         if rc != 0:
@@ -114,7 +114,7 @@ class SshTools():
     @staticmethod
     def uninstall_pubkey_usingsudo(user, host, port, keystring):
         """Uninstall an ssh key in authorized_keys file using sudo on a remote host"""
-        cmd = f"ssh -t -o LogLevel=QUIET -o StrictHostKeyChecking=no -p {port} {user}@{host} "
+        cmd = f"ssh -t -o StrictHostKeyChecking=no -p {port} {user}@{host} "
         cmd += r'''"sudo bash -c 'ESCAPED_STRING=\$(printf \"%s\" \"''' + keystring + r'''\"); sed -i \"\\~^\${ESCAPED_STRING}\\\$~d\" ~/.ssh/authorized_keys'"'''
         rc, out, err = setupenv.run_process(cmd, shell=True, print_stdout=True, print_stderr=True)
         if rc != 0:
@@ -126,7 +126,8 @@ class SshTools():
     def start_ssh_session(user, host, port, keyfile):
         """Starts an interactive ssh session"""
         cmd = f'ssh -i {keyfile} -p {port} {user}@{host}'
-        result = subprocess.run(cmd, shell=True)
+        logger.debug(f'Calling [{cmd}]')
+        result = subprocess.run(cmd, shell=True)  # can't use "setupenv.run_process" since we need to run ssh in user-interactive manner
         if result.returncode != 0:
             logger.error(f'ssh session to [{user}:{host}] returned error code [{result.returncode}]')
             return False

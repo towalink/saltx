@@ -2,6 +2,10 @@
 
 Using Saltstack with Bitwarden/Vaultwarden credential management - locally or via salt-ssh.
 
+Saltx is a wrapper around Saltstack's salt-ssh and Bitwarden/Vaultwarden. It aims at simplifying to use both tools together. Private Saltstack Pillar files and State files are stored in Bitwarden/Vaultwarden. They are synchronized to an encrypted folder (using EncFS) on the machine using Salt, often a Salt server. With this data, salt-ssh and salt-local are called and can be used as usual. Public Saltstack Pillars and States are kept in a git repository, adhering to the Infrastructure-as-Code paradigm. 
+
+With this approach, credential data can be kept secure while allowing to leverage the benefits of using Saltstack in a simple, straight-forward manner - even in a team setup.
+
 ---
 
 ## Features
@@ -48,4 +52,4 @@ You may use another directory than `/opt/pipx` but it must be accessible for the
 [![License](http://img.shields.io/:license-agpl3-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 
 - **[AGPL3 license](https://opensource.org/licenses/AGPL-3.0)**
-- Copyright 2024 © <a href="https://www.towalink.net" target="_blank">Dirk Henrici</a>.
+- Copyright 2024-2025 © <a href="https://www.towalink.net" target="_blank">Dirk Henrici</a>.
