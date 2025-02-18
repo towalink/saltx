@@ -64,8 +64,11 @@ config_template = r'''
         # Define folder for private data (folder for vault data)
         # folder_private: ~/saltx/private
         
-        # Define optional prefix for folder names
+        # Define optional prefix for State/Pillar folder names within instance
         # prefix:
+        
+        # Define prefix for target host folders (folders in which ssh key pairs are stored in)         
+        # target_prefix: host_
         
         # Configuration for access to the Git repository
         git:

@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- Documentation
+- n/a
 
 ### Changed
 
@@ -15,6 +15,24 @@ All notable changes to this project are documented in this file.
 ### Fixed
 
 - n/a
+
+## [0.4.0] - 2025-02-18
+
+### Added
+
+- Add documentation.
+- Document one more config item in config template.
+- Add usage information for "initremote" and "purgelocal".
+- Provide Saltfile argument also for "salt-call".
+- Create user minion config file for use with "salt-call".
+
+### Changed
+
+- Finalize "purgelocal".
+
+### Fixed
+
+- Print correct file info in case file is only present in vault.
 
 ## [0.3.0] - 2025-02-17
 

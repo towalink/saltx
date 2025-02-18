@@ -33,12 +33,12 @@ def get_user_choice(sync_to_file, text, file_size=None, file_mtime=None, item_si
 
 def on_onlyfile(sync_to_file, item, file_size, file_mtime, item_size=None, item_mtime=None):
     """Callback function for the case that an item only exists in local file"""
-    sync_to_file = get_user_choice(sync_to_file, f'[{item}] is not present in vault.', file_size, file_mtime)
+    sync_to_file = get_user_choice(sync_to_file, f'[{item}] is not present in vault.', file_size=file_size, file_mtime=file_mtime)
     return sync_to_file
 
 def on_onlyvault(sync_to_file, item, item_size, item_mtime, file_size=None, file_mtime=None):
     """Callback function for the case that an item only exists in credential vault"""
-    sync_to_file = get_user_choice(sync_to_file, f'[{item}] is not present as local file.', item_size, item_mtime)
+    sync_to_file = get_user_choice(sync_to_file, f'[{item}] is not present as local file.', item_size=item_size, item_mtime=item_mtime)
     return sync_to_file
 
 def on_updatefile(sync_to_file, item, file_size, file_mtime, item_size, item_mtime):

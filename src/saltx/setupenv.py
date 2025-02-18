@@ -271,9 +271,10 @@ def write_salt_conf(saltfile_name, folder_pub, folder_priv):
     salt_dir = os.path.dirname(saltfile_name)
     if not os.path.isdir(salt_dir):
         os.mkdir(salt_dir)
-    # Salt master file
+    # Salt master file and minion file
     master_name = os.path.join(salt_dir, 'master')
-    logger.debug(f'Writing Salt master config file [{master_name}]')
+    minion_name = os.path.join(salt_dir, 'minion')
+    logger.debug(f'Writing Salt master config file [{master_name}] and minion config file [{minion_name}]')
     config = f'''
         root_dir: {salt_dir}
 
@@ -289,6 +290,8 @@ def write_salt_conf(saltfile_name, folder_pub, folder_priv):
     '''
     config = textwrap.dedent(config).lstrip()
     with open(master_name, 'w') as f:
+        f.write(config)
+    with open(minion_name, 'w') as f:
         f.write(config)
     # Salt roster file
     roster_name = os.path.join(salt_dir, 'roster')

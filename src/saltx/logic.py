@@ -59,6 +59,7 @@ class Logic():
 
     def set_config_defaults(self):
         # Note: bw-linux-2024.10.0.zip and bw-linux-2024.11.0.zip not working on Alpine as of 2024-11-15
+        # Note: bw-linux-2025.1.3.zip not working on Alpine as of 2025-02-18
         self.cfg.set_item_default('instance.bw.download_url', 'https://github.com/bitwarden/clients/releases/download/cli-v2024.9.0/bw-linux-2024.9.0.zip')
         self.cfg.set_item_default('instance.bw.cli', '~/.local/bin/bw')
         self.cfg.set_item_default('instance.bw.org', 'saltx')
@@ -73,14 +74,18 @@ class Logic():
 
     def purge_directory(self):
         """Purges the Saltx directory from disk"""
-        if os.path.isdir(folder_main):        
+        if os.path.isdir(folder_main) or os.path.isdir(folder_encrypted):
             if self.queryuserobj.get_purge_local():
-                shutil.rmtree(folder_main)
-                logger.info(f'Directory {folder_main} deleted')
+                if os.path.isdir(folder_main):
+                    shutil.rmtree(folder_main)
+                    logger.info(f'Directory [{folder_main}] deleted')
+                if os.path.isdir(folder_encrypted):
+                    shutil.rmtree(folder_encrypted)
+                    logger.info(f'Directory [{folder_encrypted}] deleted')
             else:
                 logger.info('Nothing done')
         else:
-            logger.error(f'The directory {folder_main} does not exist; nothing to do')
+            logger.warn(f'The directory {folder_main} does not exist; nothing to do')
 
     def lock_folder(self, warn_if_not_encrypted=False):
         """Create/mount encrypted storage"""
@@ -291,6 +296,13 @@ class Logic():
         """Run salt-call locally"""
         logger.info('Running salt-call locally...')
         self.init_salt()
+        # Argument for Saltfile
+        saltfile_name = self.salt.get_saltfile_name()
+        if saltfile_name is None:
+            logger.critical('Saltfile not found; run "saltx initlocal" first')
+            exit(1)
+        args_string = f'--saltfile={saltfile_name} ' + args_string
+        # Call salt-call
         if not self.salt.run_salt_call_locally(args_string):
             logger.critical('Command failed')
             exit(1)
@@ -317,7 +329,8 @@ class Logic():
                     exit(1)
                 args_string = f'--saltfile={saltfile_name} ' + args_string
             else:
-                logger.warning('Salt is not yet configured (run "saltx initmaster"); just calling salt-ssh with the provided arguments')      
+                logger.warning('Salt is not yet configured (run "saltx initmaster"); just calling salt-ssh with the provided arguments')
+        # Call salt-ssh
         if not self.salt.run_salt_ssh(args_string, folder_main=folder_main):
             logger.critical('Command failed')
             exit(1)
