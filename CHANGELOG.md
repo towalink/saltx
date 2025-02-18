@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- n/a
+- Documentation
 
 ### Changed
 
@@ -16,7 +16,7 @@ All notable changes to this project are documented in this file.
 
 - n/a
 
-## [0.3.0] - tbd
+## [0.3.0] - 2025-02-17
 
 ### Added
 
@@ -28,12 +28,12 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Only configure FUSE "allow_other" if required
+- Only configure FUSE "allow_other" if required.
 
 ### Fixed
 
-- Add further reason to read config again
-- Correctly return result of get_os_id()
+- Add further reason to read config again.
+- Correctly return result of get_os_id().
 
 ## [0.2.0] - 2025-02-15
 
