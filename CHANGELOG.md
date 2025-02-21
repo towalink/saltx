@@ -16,6 +16,12 @@ All notable changes to this project are documented in this file.
 
 - n/a
 
+## [0.5.1] - 2025-02-21
+
+### Changed
+
+- Add "--rand-thin-dir" option for "salt-ssh"
+
 ## [0.5.0] - 2025-02-21
 
 ### Changed

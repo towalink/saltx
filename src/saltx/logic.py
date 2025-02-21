@@ -318,6 +318,8 @@ class Logic():
             if self.salt.is_configured():
                 # We always connect as root user
                 args_string = '--user=root ' + args_string
+                # Make sure that we do not persistently store data in /var/tmp (running as another user afterwards would fail due to wrong permissions)
+                args_string = '--rand-thin-dir ' + args_string
                 # Argument for ssh key
                 keydata = sshtools.SshTools.get_keypair(target_dir)
                 if keydata is None:
