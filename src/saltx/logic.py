@@ -316,6 +316,8 @@ class Logic():
             logger.warning(f'Host directory not found for [{target}]; just calling salt-ssh with the provided arguments')
         else:
             if self.salt.is_configured():
+                # We always connect as root user
+                args_string = '--user=root ' + args_string
                 # Argument for ssh key
                 keydata = sshtools.SshTools.get_keypair(target_dir)
                 if keydata is None:

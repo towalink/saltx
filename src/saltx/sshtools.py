@@ -45,7 +45,7 @@ class SshTools():
             dirname = tmpdirname if (dirname is None) else dirname
             logger.debug(f'Creating ssh key pair in directory [{dirname}]')
             priv_key_filename, pub_key_filename = SshTools.get_filenames(dirname)
-            rc, out, err = setupenv.run_process(f'ssh-keygen -f {priv_key_filename} -N ""', print_stdout=False, print_stderr=False)
+            rc, out, err = setupenv.run_process(f'ssh-keygen -C saltx -f {priv_key_filename} -N ""', print_stdout=False, print_stderr=False)
             if rc == 0:
                 keydata = SshTools.read_keypair(dirname)
                 logger.info(f'Created ssh key pair in [{dirname}], public key is [{keydata.pub_key}]')

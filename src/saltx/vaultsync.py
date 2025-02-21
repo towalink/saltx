@@ -72,8 +72,17 @@ class VaultSync():
             logger.info(f'Writing file [{filename}]')            
             try:
                 filename = pathlib.Path(filename)
-                filename.parent.mkdir(parents=True, exist_ok=True) # make sure needed directories exist            
-                with open(filename, 'w') as file:
+                filename.parent.mkdir(parents=True, exist_ok=True) # make sure needed directories exist
+                descriptor = os.open(
+                    path=filename,
+                    flags=(
+                        os.O_WRONLY     # access mode: write only
+                        | os.O_CREAT    # create if not exists
+                        | os.O_TRUNC    # truncate the file to zero
+                    ),
+                    mode=0o600          # no permissions to other users
+                )
+                with open(descriptor, 'w') as file:
                     file.write(s)
                 if timestamp is not None:
                     set_file_last_modified(filename, timestamp)

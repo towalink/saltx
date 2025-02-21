@@ -16,6 +16,14 @@ All notable changes to this project are documented in this file.
 
 - n/a
 
+## [0.5.0] - 2025-02-21
+
+### Changed
+
+- Change ssh key comment to be more neutral
+- Create files without giving permissions to other users
+- Always connect as root user to remote host when using salt-ssh
+
 ## [0.4.0] - 2025-02-18
 
 ### Added
