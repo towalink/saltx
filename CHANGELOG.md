@@ -16,6 +16,12 @@ All notable changes to this project are documented in this file.
 
 - n/a
 
+## [0.5.2] - 2025-02-24
+
+### Changed
+
+- Keep ssh key material in private States folder instead of Pillar folder
+
 ## [0.5.1] - 2025-02-21
 
 ### Changed

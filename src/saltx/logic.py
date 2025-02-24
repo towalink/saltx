@@ -343,7 +343,7 @@ class Logic():
         """Find the private pillar folder for the given target"""
         target_prefix = self.cfg.get_item('instance.target_prefix', 'host_')
         target_dir = target_prefix + target
-        target_dir = os.path.join(self.folder_pillar_priv, target_dir)
+        target_dir = os.path.join(self.folder_state_priv, target_dir)
         if os.path.isdir(target_dir):
             logger.debug(f'Private pillar folder for target [{target}] is [{target_dir}]')
             return target_dir

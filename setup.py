@@ -7,7 +7,7 @@ with open('README.md', 'r') as f:
 
 setup_kwargs = {
     'name': 'saltx',
-    'version': '0.5.1',
+    'version': '0.5.2',
     'author': 'Dirk Henrici',
     'author_email': 'towalink.saltx@henrici.name',
     'description': 'using Saltstack with Bitwarden/Vaultwarden credential management - locally or via salt-ssh',
